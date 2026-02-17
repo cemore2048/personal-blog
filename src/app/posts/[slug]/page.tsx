@@ -1,120 +1,131 @@
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import PostViewTracker from "@/components/PostViewTracker";
-import type { Post } from "@/lib/posts";
 
-function formatDate(value: string | null) {
-  if (!value) {
-    return "";
-  }
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "long"
-  }).format(new Date(value));
+import MarkdownRenderer from "../../../components/MarkdownRenderer";
+import { recordImpression } from "../../../lib/analytics";
+import { createServerSupabaseClient } from "../../../lib/supabase/server";
+import { resolveSiteContext } from "../../../lib/sites";
+
+type PostPageProps = {
+  params: Promise<{ slug: string }>;
+};
+
+export const dynamic = "force-dynamic";
+
+function buildCanonical(domain: string, slug: string) {
+  return `https://${domain}/posts/${slug}`;
 }
 
-export default async function PostDetailPage({
-  params
-}: {
-  params: { slug: string };
-}) {
-  const supabase = createSupabaseServerClient();
-  const { data } = await supabase
-    .from("posts")
-    .select(
-      "id, title, slug, tags, content, cover_image_url, reading_time_minutes, published_at, created_at, meta_title, meta_description"
-    )
-    .eq("slug", params.slug)
-    .eq("status", "published")
-    .single();
+function buildExcerpt(content: string) {
+  const cleaned = content.replace(/\s+/g, " ").trim();
+  return cleaned.length > 160 ? `${cleaned.slice(0, 157)}...` : cleaned;
+}
 
-  if (!data) {
-    notFound();
+async function fetchPublishedPost(siteId: string, slug: string) {
+  const supabase = await createServerSupabaseClient();
+  return supabase
+    .from("posts")
+    .select("id, title, slug, content_md, published_at")
+    .eq("site_id", siteId)
+    .eq("status", "published")
+    .lte("published_at", new Date().toISOString())
+    .eq("slug", slug)
+    .maybeSingle();
+}
+
+async function resolveRedirectSlug(siteId: string, slug: string) {
+  const supabase = await createServerSupabaseClient();
+  const { data: slugEntry } = await supabase
+    .from("post_slugs")
+    .select("post_id")
+    .eq("site_id", siteId)
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!slugEntry) {
+    return null;
   }
 
-  const post = data as Pick<
-    Post,
-    | "id"
-    | "title"
-    | "slug"
-    | "tags"
-    | "content"
-    | "cover_image_url"
-    | "reading_time_minutes"
-    | "published_at"
-    | "created_at"
-    | "meta_title"
-    | "meta_description"
-  >;
+  const { data: post } = await supabase
+    .from("posts")
+    .select("slug, status, published_at")
+    .eq("id", slugEntry.post_id)
+    .eq("site_id", siteId)
+    .maybeSingle();
 
-  return (
-    <article className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-slate-900">{post.title}</h1>
-        <div className="text-xs text-slate-500">
-          {formatDate(post.published_at ?? post.created_at)}
-          {post.reading_time_minutes ? (
-            <span> · {post.reading_time_minutes} min read</span>
-          ) : null}
-        </div>
-        {post.tags?.length ? (
-          <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-            {post.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded border border-slate-200 px-2 py-0.5"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </header>
-      {post.cover_image_url ? (
-        <img
-          src={post.cover_image_url}
-          alt={post.title}
-          className="max-h-[420px] w-full rounded-lg object-cover"
-        />
-      ) : null}
-      <div className="prose max-w-none">
-        <ReactMarkdown>{post.content}</ReactMarkdown>
-      </div>
-      <PostViewTracker postId={post.id} />
-    </article>
-  );
+  if (!post || post.status !== "published") {
+    return null;
+  }
+
+  if (post.published_at && new Date(post.published_at) > new Date()) {
+    return null;
+  }
+
+  return post.slug;
 }
 
 export async function generateMetadata({
-  params
-}: {
-  params: { slug: string };
-}): Promise<Metadata> {
-  const supabase = createSupabaseServerClient();
-  const { data } = await supabase
-    .from("posts")
-    .select("title, meta_title, meta_description, cover_image_url")
-    .eq("slug", params.slug)
-    .eq("status", "published")
-    .single();
+  params,
+}: PostPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const { site } = await resolveSiteContext();
 
-  if (!data) {
+  if (!site) {
     return {};
   }
 
-  const title = data.meta_title || data.title;
-  const description = data.meta_description || undefined;
+  const { data: post } = await fetchPublishedPost(site.id, slug);
+
+  if (!post) {
+    return {};
+  }
+
+  const canonical = buildCanonical(site.domain, post.slug);
 
   return {
-    title,
-    description,
-    openGraph: data.cover_image_url
-      ? {
-          title,
-          description,
-          images: [data.cover_image_url]
-        }
-      : undefined
+    title: post.title,
+    description: buildExcerpt(post.content_md ?? ""),
+    alternates: {
+      canonical,
+    },
   };
+}
+
+export default async function PostPage({ params }: PostPageProps) {
+  const { slug } = await params;
+  const { site } = await resolveSiteContext();
+
+  if (!site) {
+    notFound();
+  }
+
+  const { data: post } = await fetchPublishedPost(site.id, slug);
+
+  if (!post) {
+    const redirectSlug = await resolveRedirectSlug(site.id, slug);
+    if (redirectSlug) {
+      redirect(`/posts/${redirectSlug}`);
+    }
+    notFound();
+  }
+
+  await recordImpression({
+    siteId: site.id,
+    postId: post.id,
+    path: `/posts/${post.slug}`,
+  });
+
+  return (
+    <main className="page">
+      <article>
+        <h1>{post.title}</h1>
+        {post.published_at ? (
+          <p className="meta">
+            {new Date(post.published_at).toLocaleDateString()}
+          </p>
+        ) : null}
+        <MarkdownRenderer content={post.content_md ?? ""} />
+      </article>
+    </main>
+  );
 }

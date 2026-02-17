@@ -1,27 +1,495 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "highlight.js/styles/github-dark.css";
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
+  --bg: #0e1116;
+  --surface: #151a21;
+  --surface-muted: #171c23;
+  --border: rgba(255, 255, 255, 0.08);
+  --divider: rgba(255, 255, 255, 0.06);
+  --text-primary: #e6eaf0;
+  --text-secondary: #9aa4b2;
+  --text-muted: #6b7280;
+  --accent: #7aa2f7;
+  --danger: #f87171;
+  --success: #34d399;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
-  @apply bg-white text-slate-900;
+  margin: 0;
+  font-family: "Inter", "Source Sans 3", "Roboto Flex", system-ui,
+    -apple-system, sans-serif;
+  font-size: 17px;
+  line-height: 1.7;
+  font-weight: 400;
+  color: var(--text-primary);
+  background: var(--bg);
+  text-rendering: optimizeLegibility;
 }
 
 a {
-  @apply text-blue-600 hover:text-blue-700;
+  color: var(--accent);
+  text-decoration: none;
 }
 
-.prose pre {
-  @apply rounded-lg bg-slate-900 p-4 text-slate-100;
+a:hover {
+  text-decoration: underline;
 }
 
-.prose code {
-  @apply rounded bg-slate-100 px-1 py-0.5 text-slate-900;
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
-.prose pre code {
-  @apply bg-transparent p-0 text-inherit;
+::selection {
+  background: rgba(122, 162, 247, 0.3);
+}
+
+main {
+  display: block;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-weight: 600;
+  margin: 2rem 0 0.75rem 0;
+}
+
+h1:first-child,
+h2:first-child,
+h3:first-child,
+h4:first-child {
+  margin-top: 0;
+}
+
+p {
+  margin: 0 0 1rem 0;
+}
+
+code,
+pre,
+.meta {
+  font-family: "JetBrains Mono", "Recursive Mono", ui-monospace, SFMono-Regular,
+    Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.page {
+  max-width: 720px;
+  padding: 4rem 2rem;
+  margin: 0 auto;
+}
+
+.page--narrow {
+  max-width: 520px;
+}
+
+.page--medium {
+  max-width: 640px;
+}
+
+.page--wide {
+  max-width: 840px;
+}
+
+.page--xwide {
+  max-width: 1200px;
+}
+
+.section {
+  margin-top: 2rem;
+}
+
+.stack {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-error {
+  color: var(--danger);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.meta {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0.35rem 0;
+}
+
+.no-margin {
+  margin: 0;
+}
+
+.inline-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.preformatted {
+  background: var(--surface);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.divider {
+  border-top: 1px solid var(--divider);
+  margin: 2rem 0;
+}
+
+.list-reset {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list-item {
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+}
+
+.card--muted {
+  background: var(--surface-muted);
+}
+
+.card--spaced {
+  margin-bottom: 1rem;
+}
+
+.card-title {
+  margin-top: 0;
+}
+
+.form {
+  margin-top: 2rem;
+}
+
+.form-field {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.form-actions {
+  margin-top: 0.75rem;
+}
+
+label {
+  color: var(--text-primary);
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.4rem;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: none;
+}
+
+.button:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  text-decoration: none;
+}
+
+.button-primary {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.button-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.button-link {
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--accent);
+}
+
+.button-link.button-danger {
+  color: var(--danger);
+}
+
+.button[disabled],
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.drawer-toggle {
+  position: fixed;
+  right: 1rem;
+  top: 1.25rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  justify-content: center;
+  z-index: 60;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 70;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 380px;
+  max-width: 90vw;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  padding: 1.5rem;
+  transform: translateX(100%);
+  transition: transform 180ms ease-out;
+  z-index: 80;
+  overflow-y: auto;
+}
+
+.drawer--open {
+  transform: translateX(0);
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.markdown {
+  line-height: 1.75;
+  font-size: 1.05rem;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin-top: 2.25rem;
+}
+
+.markdown pre {
+  background: var(--surface);
+  padding: 1rem;
+  border-radius: 10px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+}
+
+.markdown code {
+  background: var(--surface-muted);
+  padding: 0.1rem 0.3rem;
+  border-radius: 6px;
+}
+
+.markdown pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.markdown img {
+  max-width: 100%;
+  border-radius: 10px;
+}
+
+.markdown blockquote {
+  margin: 1.5rem 0;
+  padding-left: 1rem;
+  border-left: 2px solid var(--divider);
+  color: var(--text-secondary);
+}
+
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.markdown th,
+.markdown td {
+  border: 1px solid var(--border);
+  padding: 0.6rem 0.75rem;
+}
+
+.markdown-embed {
+  margin: 1.5rem 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.markdown-embed iframe {
+  width: 100%;
+  height: 360px;
+  border: 0;
+  display: block;
+}
+
+.markdown-embed--placeholder {
+  padding: 1rem;
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+}
+
+.tiptap-shell {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tiptap-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.tiptap-toolbar button {
+  border: 1px solid var(--border);
+  background: transparent;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.tiptap-toolbar button[data-active="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tiptap-toolbar-separator {
+  width: 1px;
+  background: var(--divider);
+  margin: 0 0.25rem;
+}
+
+.tiptap-editor {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.9rem;
+  min-height: 420px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.tiptap-editor:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.tiptap-editor p {
+  margin: 0 0 0.75rem 0;
+}
+
+.tiptap-editor h1,
+.tiptap-editor h2,
+.tiptap-editor h3 {
+  margin: 1.2rem 0 0.6rem 0;
+}
+
+.tiptap-embed {
+  margin: 1rem 0;
+}
+
+.tiptap-embed-frame {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.tiptap-embed-frame iframe {
+  width: 100%;
+  height: 320px;
+  border: 0;
+  display: block;
+}
+
+.tiptap-embed-placeholder {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+}
+
+.tiptap-help {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
 }
