@@ -47,6 +47,35 @@ export async function createDraftAction(formData: FormData) {
   redirect(`/admin/posts/${data!.id}`);
 }
 
+export async function createNewPostAction() {
+  await requireAdminSession();
+  const siteId = await getSelectedSiteId();
+
+  if (!siteId) {
+    redirect("/admin/sites");
+  }
+
+  const slug = `${slugify("untitled")}-${Date.now()}`;
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("posts")
+    .insert({
+      site_id: siteId,
+      title: "Untitled",
+      slug,
+      status: "draft",
+      notify_on_publish: false,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    redirectWithError(error?.message ?? "Unable to create post.");
+  }
+
+  redirect(`/admin/posts/${data!.id}`);
+}
+
 export async function deleteDraftAction(formData: FormData) {
   await requireAdminSession();
   const siteId = await getSelectedSiteId();
