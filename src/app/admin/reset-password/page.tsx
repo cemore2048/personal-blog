@@ -47,13 +47,17 @@ export default function ResetPasswordPage() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
+        setRecoveryReady(true);
+        return;
+      }
+      // After email link: client finishes URL exchange before this runs (initializePromise).
+      // PASSWORD_RECOVERY can be missed (Strict Mode / timing); session here is reliable.
+      if (event === "INITIAL_SESSION" && session) {
         setRecoveryReady(true);
       }
     });
-
-    void supabase.auth.getSession();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -70,13 +74,6 @@ export default function ResetPasswordPage() {
     const policyErrors = getPasswordPolicyErrors(password);
     if (policyErrors.length > 0) {
       setErrorMessage(policyErrors.join(" "));
-      return;
-    }
-
-    if (!recoveryReady) {
-      setErrorMessage(
-        "Reset session not found. Open this page from the link in your reset email, or request a new link."
-      );
       return;
     }
 
@@ -156,14 +153,10 @@ export default function ResetPasswordPage() {
         ) : null}
         <button
           type="submit"
-          disabled={isLoading || !recoveryReady}
+          disabled={isLoading}
           className="button button-primary"
         >
-          {isLoading
-            ? "Saving…"
-            : !recoveryReady
-              ? "Waiting for reset link…"
-              : "Update password"}
+          {isLoading ? "Saving…" : "Update password"}
         </button>
       </form>
       <p>
