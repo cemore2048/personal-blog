@@ -17,7 +17,12 @@ export default function AdminLayoutShell({
 }: AdminLayoutShellProps) {
   const pathname = usePathname();
 
-  if (pathname === "/admin/login") {
+  const bareAdminPaths = new Set([
+    "/admin/login",
+    "/admin/forgot-password",
+    "/admin/reset-password",
+  ]);
+  if (pathname && bareAdminPaths.has(pathname)) {
     return <>{children}</>;
   }
 
