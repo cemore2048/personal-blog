@@ -9,6 +9,16 @@ function normalizeHostname(hostname: string) {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
+const publicAdminPrefixes = [
+  "/admin/login",
+  "/admin/forgot-password",
+  "/admin/reset-password",
+] as const;
+
+function isPublicAdminPath(pathname: string) {
+  return publicAdminPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 export async function proxy(request: NextRequest) {
   const host = request.headers.get("host") ?? "";
   const hostname = normalizeHostname(host);
@@ -29,7 +39,7 @@ export async function proxy(request: NextRequest) {
     response = NextResponse.rewrite(url);
   }
 
-  if (adminPath.startsWith("/admin") && !adminPath.startsWith("/admin/login")) {
+  if (adminPath.startsWith("/admin") && !isPublicAdminPath(adminPath)) {
     if (!supabaseUrl || !supabaseAnonKey) {
       return response;
     }
