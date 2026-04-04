@@ -9,6 +9,28 @@ coverage
 .DS_Store
 *.log
 
+# npm cache when directed into the repo (e.g. npm_config_cache)
+.npm-cache/
+
+# TypeScript incremental build info (if emitted outside .next)
+*.tsbuildinfo
+
+# ESLint cache (eslint --cache)
+.eslintcache
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Supabase CLI (local dev / branches)
+supabase/.branches/
+supabase/.temp/
+
+# Other package managers
+pnpm-debug.log*
+
 .specstory
 # Env files
 .env

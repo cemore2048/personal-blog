@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { createBrowserSupabaseClient } from "../../../lib/supabase/client";
+import {
+  PASSWORD_MIN_LENGTH,
+  getPasswordPolicyErrors,
+} from "../../../lib/password-policy";
 
 function hashLooksLikeRecovery() {
   if (typeof window === "undefined") {
@@ -15,6 +19,14 @@ function hashLooksLikeRecovery() {
     return false;
   }
   const params = new URLSearchParams(raw);
+  return params.get("type") === "recovery";
+}
+
+function queryLooksLikeRecovery() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  const params = new URLSearchParams(window.location.search);
   return params.get("type") === "recovery";
 }
 
@@ -29,7 +41,7 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
 
-    if (hashLooksLikeRecovery()) {
+    if (hashLooksLikeRecovery() || queryLooksLikeRecovery()) {
       setRecoveryReady(true);
     }
 
@@ -55,8 +67,16 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setErrorMessage("Use at least 6 characters.");
+    const policyErrors = getPasswordPolicyErrors(password);
+    if (policyErrors.length > 0) {
+      setErrorMessage(policyErrors.join(" "));
+      return;
+    }
+
+    if (!recoveryReady) {
+      setErrorMessage(
+        "Reset session not found. Open this page from the link in your reset email, or request a new link."
+      );
       return;
     }
 
@@ -73,27 +93,33 @@ export default function ResetPasswordPage() {
     router.replace("/admin/sites");
   };
 
-  if (!recoveryReady) {
-    return (
-      <main className="page page--narrow">
-        <h1>Set new password</h1>
-        <p className="text-secondary">
-          Open this page using the link in your reset email. If you landed here
-          without that link, request a new one.
-        </p>
-        <p>
-          <Link href="/admin/forgot-password">Send reset link</Link>
-          {" · "}
-          <Link href="/admin/login">Back to login</Link>
-        </p>
-      </main>
-    );
-  }
+  const policyErrors = getPasswordPolicyErrors(password);
+  const showPolicyHints = password.length > 0 && policyErrors.length > 0;
 
   return (
     <main className="page page--narrow">
-      <h1>Choose a new password</h1>
-      <p className="text-secondary">Sign in next time with this password.</p>
+      <h1>Set new password</h1>
+      {!recoveryReady ? (
+        <p className="text-secondary">
+          Open this page from the link in your reset email. If the form stays
+          locked, use &quot;Request new link&quot; below, then try again.
+        </p>
+      ) : (
+        <p className="text-secondary">
+          Choose a strong password. You will use it to sign in next time.
+        </p>
+      )}
+
+      <ul
+        id="password-requirements"
+        className="reset-password-requirements text-secondary"
+      >
+        <li>At least {PASSWORD_MIN_LENGTH} characters</li>
+        <li>Uppercase and lowercase letters</li>
+        <li>At least one number</li>
+        <li>At least one symbol (e.g. !@#$%)</li>
+      </ul>
+
       <form onSubmit={handleSubmit} className="form">
         <label className="form-field">
           New password
@@ -101,9 +127,10 @@ export default function ResetPasswordPage() {
             type="password"
             required
             autoComplete="new-password"
-            minLength={6}
+            minLength={PASSWORD_MIN_LENGTH}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            aria-describedby="password-requirements"
           />
         </label>
         <label className="form-field">
@@ -112,23 +139,36 @@ export default function ResetPasswordPage() {
             type="password"
             required
             autoComplete="new-password"
-            minLength={6}
+            minLength={PASSWORD_MIN_LENGTH}
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
           />
         </label>
+        {showPolicyHints ? (
+          <ul className="text-error reset-password-missing">
+            {policyErrors.map((msg) => (
+              <li key={msg}>{msg}</li>
+            ))}
+          </ul>
+        ) : null}
         {errorMessage ? (
           <p className="text-error">{errorMessage}</p>
         ) : null}
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || !recoveryReady}
           className="button button-primary"
         >
-          {isLoading ? "Saving…" : "Update password"}
+          {isLoading
+            ? "Saving…"
+            : !recoveryReady
+              ? "Waiting for reset link…"
+              : "Update password"}
         </button>
       </form>
       <p>
+        <Link href="/admin/forgot-password">Request new link</Link>
+        {" · "}
         <Link href="/admin/login">Back to login</Link>
       </p>
     </main>

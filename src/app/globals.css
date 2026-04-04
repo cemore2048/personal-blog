@@ -170,6 +170,19 @@ pre,
   margin: 0;
 }
 
+.reset-password-requirements {
+  margin: 0 0 1.25rem;
+  padding-left: 1.25rem;
+  font-size: 0.95rem;
+}
+
+.reset-password-missing {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+  font-size: 0.95rem;
+  list-style: disc;
+}
+
 .list-item {
   margin-bottom: 1.5rem;
 }
