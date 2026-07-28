@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import RichMarkdownEditor from "./RichMarkdownEditor";
+import EditorPane from "./editor/EditorPane";
 
 type DraftEditorFormProps = {
   postId: string;
@@ -59,7 +59,7 @@ export default function DraftEditorForm({
       <p className="meta">Updated: {updatedLabel}</p>
       <section className="section">
         <h2>Content</h2>
-        <RichMarkdownEditor
+        <EditorPane
           initialMarkdown={markdown}
           onMarkdownChange={setMarkdown}
         />
