@@ -24,15 +24,10 @@ export async function subscribeAction(formData: FormData) {
   }
 
   const supabase = await createServerSupabaseClient();
-  const { error } = await supabase.from("subscribers").upsert(
-    {
-      site_id: site!.id,
-      email: rawEmail,
-      status: "active",
-      unsubscribed_at: null,
-    },
-    { onConflict: "site_id,email" }
-  );
+  const { error } = await supabase.rpc("subscribe_to_site", {
+    p_site_id: site!.id,
+    p_email: rawEmail,
+  });
 
   if (error) {
     redirectWithMessage("/subscribe", error.message);
@@ -55,15 +50,10 @@ export async function unsubscribeAction(formData: FormData) {
   }
 
   const supabase = await createServerSupabaseClient();
-  const { error } = await supabase.from("subscribers").upsert(
-    {
-      site_id: site!.id,
-      email: rawEmail,
-      status: "unsubscribed",
-      unsubscribed_at: new Date().toISOString(),
-    },
-    { onConflict: "site_id,email" }
-  );
+  const { error } = await supabase.rpc("unsubscribe_from_site", {
+    p_site_id: site!.id,
+    p_email: rawEmail,
+  });
 
   if (error) {
     redirectWithMessage("/unsubscribe", error.message);

@@ -37,6 +37,8 @@ create table if not exists public.post_slugs (
 create unique index if not exists post_slugs_site_slug_unique
   on public.post_slugs (site_id, slug);
 
+create index if not exists post_slugs_post_id_idx on public.post_slugs (post_id);
+
 create table if not exists public.subscribers (
   id uuid primary key default gen_random_uuid(),
   site_id uuid not null references public.sites(id) on delete cascade,
@@ -63,6 +65,9 @@ create table if not exists public.email_outbox (
 
 create unique index if not exists email_outbox_post_subscriber_unique
   on public.email_outbox (post_id, subscriber_id);
+
+create index if not exists email_outbox_site_id_idx on public.email_outbox (site_id);
+create index if not exists email_outbox_subscriber_id_idx on public.email_outbox (subscriber_id);
 
 create table if not exists public.impressions (
   id uuid primary key default gen_random_uuid(),
@@ -158,6 +163,8 @@ $$;
 create or replace function public.enqueue_post_emails(post_id uuid)
 returns void
 language plpgsql
+security invoker
+set search_path = public
 as $$
 begin
   insert into public.email_outbox (site_id, post_id, subscriber_id, to_email)
@@ -182,6 +189,8 @@ $$;
 create or replace function public.publish_scheduled_posts()
 returns void
 language plpgsql
+security definer
+set search_path = public
 as $$
 begin
   with published as (
@@ -196,6 +205,239 @@ begin
   select public.enqueue_post_emails(published.id) from published;
 end;
 $$;
+
+create or replace function public.subscribe_to_site(p_site_id uuid, p_email text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  normalized text := lower(trim(p_email));
+begin
+  if p_site_id is null or normalized is null or normalized = '' or position('@' in normalized) = 0 then
+    raise exception 'Invalid subscribe request';
+  end if;
+
+  if not exists (select 1 from public.sites where id = p_site_id) then
+    raise exception 'Site not found';
+  end if;
+
+  insert into public.subscribers (site_id, email, status, unsubscribed_at)
+  values (p_site_id, normalized, 'active', null)
+  on conflict (site_id, email) do update
+    set status = 'active',
+        unsubscribed_at = null;
+end;
+$$;
+
+create or replace function public.unsubscribe_from_site(p_site_id uuid, p_email text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  normalized text := lower(trim(p_email));
+begin
+  if p_site_id is null or normalized is null or normalized = '' or position('@' in normalized) = 0 then
+    raise exception 'Invalid unsubscribe request';
+  end if;
+
+  if not exists (select 1 from public.sites where id = p_site_id) then
+    raise exception 'Site not found';
+  end if;
+
+  insert into public.subscribers (site_id, email, status, unsubscribed_at)
+  values (p_site_id, normalized, 'unsubscribed', now())
+  on conflict (site_id, email) do update
+    set status = 'unsubscribed',
+        unsubscribed_at = now();
+end;
+$$;
+
+revoke all on function public.enqueue_post_emails(uuid) from public;
+revoke all on function public.enqueue_post_emails(uuid) from anon;
+grant execute on function public.enqueue_post_emails(uuid) to authenticated;
+grant execute on function public.enqueue_post_emails(uuid) to service_role;
+
+revoke all on function public.publish_scheduled_posts() from public;
+revoke all on function public.publish_scheduled_posts() from anon;
+revoke all on function public.publish_scheduled_posts() from authenticated;
+grant execute on function public.publish_scheduled_posts() to postgres;
+grant execute on function public.publish_scheduled_posts() to service_role;
+
+revoke all on function public.subscribe_to_site(uuid, text) from public;
+grant execute on function public.subscribe_to_site(uuid, text) to anon, authenticated, service_role;
+
+revoke all on function public.unsubscribe_from_site(uuid, text) from public;
+grant execute on function public.unsubscribe_from_site(uuid, text) to anon, authenticated, service_role;
+
+alter table public.sites enable row level security;
+alter table public.posts enable row level security;
+alter table public.post_slugs enable row level security;
+alter table public.subscribers enable row level security;
+alter table public.email_outbox enable row level security;
+alter table public.impressions enable row level security;
+
+-- sites: public read (domain resolution); authenticated write
+drop policy if exists sites_select_public on public.sites;
+create policy sites_select_public
+  on public.sites for select
+  to anon, authenticated
+  using (true);
+
+drop policy if exists sites_insert_authenticated on public.sites;
+create policy sites_insert_authenticated
+  on public.sites for insert
+  to authenticated
+  with check ((select auth.uid()) is not null);
+
+drop policy if exists sites_update_authenticated on public.sites;
+create policy sites_update_authenticated
+  on public.sites for update
+  to authenticated
+  using ((select auth.uid()) is not null)
+  with check ((select auth.uid()) is not null);
+
+drop policy if exists sites_delete_authenticated on public.sites;
+create policy sites_delete_authenticated
+  on public.sites for delete
+  to authenticated
+  using ((select auth.uid()) is not null);
+
+-- posts: anon only published; authenticated full access
+drop policy if exists posts_select_published on public.posts;
+create policy posts_select_published
+  on public.posts for select
+  to anon
+  using (
+    status = 'published'
+    and published_at is not null
+    and published_at <= now()
+  );
+
+drop policy if exists posts_select_authenticated on public.posts;
+create policy posts_select_authenticated
+  on public.posts for select
+  to authenticated
+  using (true);
+
+drop policy if exists posts_insert_authenticated on public.posts;
+create policy posts_insert_authenticated
+  on public.posts for insert
+  to authenticated
+  with check ((select auth.uid()) is not null);
+
+drop policy if exists posts_update_authenticated on public.posts;
+create policy posts_update_authenticated
+  on public.posts for update
+  to authenticated
+  using ((select auth.uid()) is not null)
+  with check ((select auth.uid()) is not null);
+
+drop policy if exists posts_delete_authenticated on public.posts;
+create policy posts_delete_authenticated
+  on public.posts for delete
+  to authenticated
+  using ((select auth.uid()) is not null);
+
+-- post_slugs: public read; authenticated write
+drop policy if exists post_slugs_select_public on public.post_slugs;
+create policy post_slugs_select_public
+  on public.post_slugs for select
+  to anon, authenticated
+  using (true);
+
+drop policy if exists post_slugs_insert_authenticated on public.post_slugs;
+create policy post_slugs_insert_authenticated
+  on public.post_slugs for insert
+  to authenticated
+  with check ((select auth.uid()) is not null);
+
+drop policy if exists post_slugs_update_authenticated on public.post_slugs;
+create policy post_slugs_update_authenticated
+  on public.post_slugs for update
+  to authenticated
+  using ((select auth.uid()) is not null)
+  with check ((select auth.uid()) is not null);
+
+drop policy if exists post_slugs_delete_authenticated on public.post_slugs;
+create policy post_slugs_delete_authenticated
+  on public.post_slugs for delete
+  to authenticated
+  using ((select auth.uid()) is not null);
+
+-- subscribers: no public table access (use RPCs); authenticated manage
+drop policy if exists subscribers_select_authenticated on public.subscribers;
+create policy subscribers_select_authenticated
+  on public.subscribers for select
+  to authenticated
+  using (true);
+
+drop policy if exists subscribers_insert_authenticated on public.subscribers;
+create policy subscribers_insert_authenticated
+  on public.subscribers for insert
+  to authenticated
+  with check ((select auth.uid()) is not null);
+
+drop policy if exists subscribers_update_authenticated on public.subscribers;
+create policy subscribers_update_authenticated
+  on public.subscribers for update
+  to authenticated
+  using ((select auth.uid()) is not null)
+  with check ((select auth.uid()) is not null);
+
+drop policy if exists subscribers_delete_authenticated on public.subscribers;
+create policy subscribers_delete_authenticated
+  on public.subscribers for delete
+  to authenticated
+  using ((select auth.uid()) is not null);
+
+-- email_outbox: authenticated only
+drop policy if exists email_outbox_select_authenticated on public.email_outbox;
+create policy email_outbox_select_authenticated
+  on public.email_outbox for select
+  to authenticated
+  using (true);
+
+drop policy if exists email_outbox_insert_authenticated on public.email_outbox;
+create policy email_outbox_insert_authenticated
+  on public.email_outbox for insert
+  to authenticated
+  with check ((select auth.uid()) is not null);
+
+drop policy if exists email_outbox_update_authenticated on public.email_outbox;
+create policy email_outbox_update_authenticated
+  on public.email_outbox for update
+  to authenticated
+  using ((select auth.uid()) is not null)
+  with check ((select auth.uid()) is not null);
+
+drop policy if exists email_outbox_delete_authenticated on public.email_outbox;
+create policy email_outbox_delete_authenticated
+  on public.email_outbox for delete
+  to authenticated
+  using ((select auth.uid()) is not null);
+
+-- impressions: public insert for analytics; authenticated read
+drop policy if exists impressions_insert_public on public.impressions;
+create policy impressions_insert_public
+  on public.impressions for insert
+  to anon, authenticated
+  with check (true);
+
+drop policy if exists impressions_select_authenticated on public.impressions;
+create policy impressions_select_authenticated
+  on public.impressions for select
+  to authenticated
+  using (true);
+
+drop policy if exists impressions_delete_authenticated on public.impressions;
+create policy impressions_delete_authenticated
+  on public.impressions for delete
+  to authenticated
+  using ((select auth.uid()) is not null);
 
 do $$
 begin
