@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 
+import BrandMark from "../../../components/BrandMark";
 import MarkdownRenderer from "../../../components/MarkdownRenderer";
 import { recordImpression } from "../../../lib/analytics";
 import { createServerSupabaseClient } from "../../../lib/supabase/server";
@@ -117,6 +118,9 @@ export default async function PostPage({ params }: PostPageProps) {
 
   return (
     <main className="page">
+      <nav className="site-nav">
+        <BrandMark size="sm" label={site.name} showLabel />
+      </nav>
       <article>
         <h1>{post.title}</h1>
         {post.published_at ? (

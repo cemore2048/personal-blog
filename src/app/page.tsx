@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import BrandMark from "../components/BrandMark";
 import { recordImpression } from "../lib/analytics";
 import { createServerSupabaseClient } from "../lib/supabase/server";
 import { resolveSiteContext } from "../lib/sites";
@@ -31,8 +32,8 @@ export default async function HomePage() {
 
   return (
     <main className="page">
-      <header>
-        <h1>{site.name}</h1>
+      <header className="site-header">
+        <BrandMark size="lg" label={site.name} showLabel asHeading href={null} />
         <p className="text-secondary">Latest posts</p>
       </header>
       {error ? <p className="text-error">{error.message}</p> : null}

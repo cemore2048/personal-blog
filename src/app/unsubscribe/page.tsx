@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import BrandMark from "../../components/BrandMark";
 import { unsubscribeAction } from "../subscribe/actions";
 import { resolveSiteContext } from "../../lib/sites";
 
@@ -16,6 +17,9 @@ export default async function UnsubscribePage({
 
   return (
     <main className="page page--medium">
+      <nav className="site-nav">
+        <BrandMark size="sm" label={site?.name} showLabel={Boolean(site?.name)} />
+      </nav>
       <h1>Unsubscribe</h1>
       <p className="text-secondary">
         Stop receiving emails from {site?.name ?? "this site"}.

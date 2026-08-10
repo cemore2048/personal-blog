@@ -86,6 +86,52 @@ pre,
     Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
+.brand-mark-link {
+  display: inline-flex;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brand-mark-link:hover {
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand-mark__icon {
+  display: block;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.brand-mark__label {
+  font-weight: 600;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.brand-mark--lg .brand-mark__label {
+  font-size: 1.75rem;
+}
+
+.site-header {
+  margin-bottom: 2rem;
+}
+
+.site-header .brand-mark {
+  margin-bottom: 0.75rem;
+}
+
+.site-nav {
+  margin-bottom: 2rem;
+}
+
 .page {
   max-width: 720px;
   padding: 4rem 2rem;
@@ -522,7 +568,14 @@ textarea::placeholder {
 }
 
 .admin-sidebar-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
+}
+
+.admin-sidebar-header-text {
+  min-width: 0;
 }
 
 .admin-sidebar-title {

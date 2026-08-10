@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import BrandMark from "../../../components/BrandMark";
 import { createBrowserSupabaseClient } from "../../../lib/supabase/client";
 
 export default function AdminLoginPage() {
@@ -35,6 +36,9 @@ export default function AdminLoginPage() {
 
   return (
     <main className="page page--narrow">
+      <div className="site-header">
+        <BrandMark size="md" href={null} />
+      </div>
       <h1>Admin Login</h1>
       <p className="text-secondary">Use your Supabase Auth credentials.</p>
       <form onSubmit={handleSubmit} className="form">

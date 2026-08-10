@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import BrandMark from "../../components/BrandMark";
 import { subscribeAction } from "./actions";
 import { resolveSiteContext } from "../../lib/sites";
 
@@ -16,6 +17,9 @@ export default async function SubscribePage({
 
   return (
     <main className="page page--medium">
+      <nav className="site-nav">
+        <BrandMark size="sm" label={site?.name} showLabel={Boolean(site?.name)} />
+      </nav>
       <h1>Subscribe</h1>
       <p className="text-secondary">
         Get new posts from {site?.name ?? "this site"}.

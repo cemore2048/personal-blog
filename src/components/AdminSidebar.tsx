@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { createNewPostAction } from "../app/admin/posts/actions";
+import BrandMark from "./BrandMark";
 
 type AdminSidebarProps = {
   siteName: string;
@@ -74,8 +75,11 @@ export default function AdminSidebar({ siteName, publicUrl }: AdminSidebarProps)
   return (
     <aside className="admin-sidebar">
       <div className="admin-sidebar-header">
-        <h2 className="admin-sidebar-title">{siteName}</h2>
-        <p className="admin-sidebar-subtitle">Admin Panel</p>
+        <BrandMark size="sm" href={null} />
+        <div className="admin-sidebar-header-text">
+          <h2 className="admin-sidebar-title">{siteName}</h2>
+          <p className="admin-sidebar-subtitle">Admin Panel</p>
+        </div>
       </div>
       <nav className="admin-sidebar-nav">
         <Link
